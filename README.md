@@ -9,6 +9,6 @@ UI to train and predict models made usign Streamlit and Keras.
 
 ## Predicting
 
-![Sample UI](./images/predict.png)
+![Sample UI](./images/pedict.png)
 
 Adapted from Shubhaditya Goswami
