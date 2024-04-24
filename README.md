@@ -22,4 +22,9 @@ streamlit run .\main.py
 
 ![Sample UI](./images/pedict.png)
 
+
+Main branch only uses dense layers.
+
+Check out the cnn branch, that uses Conv2D layers as well as MaxPool layers.
+
 Adapted from Shubhaditya Goswami
