@@ -4,6 +4,7 @@ from tensorflow.keras import layers
 import numpy as np
 import time
 import streamlit as st
+from tensorflow.keras.layers import Conv2D, Input, MaxPool2D, BatchNormalization
 
 def footer_markdown():
     footer="""
@@ -46,7 +47,10 @@ def app():
         based on given data and model.
         """
         with tf.GradientTape() as tape:
+            x = x[..., np.newaxis]
+            x = x[None,:,:,:]
             logits = model(x, training=True)
+            logits= tf.transpose(logits)
             loss_value = loss_fn(y, logits)
         grads = tape.gradient(loss_value, model.trainable_weights)
         optimizer.apply_gradients(zip(grads, model.trainable_weights))
@@ -60,7 +64,10 @@ def app():
         Tensorflow function to compute predicted loss and metric using sent 
         data from the trained model.
         """
+        x = x[..., np.newaxis]
+        x = x[None,:,:,:]
         val_logits = model(x, training=False)
+        val_logits= tf.transpose(val_logits)
         val_acc_metric.update_state(y, val_logits)
         return loss_fn(y, val_logits)
     
@@ -72,6 +79,7 @@ def app():
     
     in_pl = st.empty()
     input_shape = in_pl.text_input("Enter input shape, either number or tuple")
+    input_shape = "784"
     if input_shape:
         # Check if input shape is in correct format.
         input_valid = False
@@ -104,19 +112,35 @@ def app():
     
                     if output_num:
                         output_num = int(output_num)
-                        inputs = keras.Input(shape=(input_shape,), name="digits")
-                        dense_layer_dict = {}
-                        for i in range(dense_layer_num):
-                            if i == 0:
-                                dense_layer_dict[i]= layers.Dense(dense_layer_node, 
-                                                                  activation=dense_activation)(
-                                                                      inputs)
-                            else:
-                                dense_layer_dict[i] = layers.Dense(dense_layer_node, 
-                                                                   activation=dense_activation)(
-                                                                       dense_layer_dict[i-1])
-                        outputs = layers.Dense(output_num, name="predictions")(dense_layer_dict[i])
-                        model = keras.Model(inputs=inputs, outputs=outputs)
+                        inputs = keras.Input(shape=(32, input_shape, 1), name="digits")
+
+                        layer = []
+                        layer.append(inputs)
+                        for i in range(1,dense_layer_num):
+                            layer.append(Conv2D(dense_layer_node, (3,3), activation=dense_activation))
+                            layer.append(MaxPool2D())
+                                
+
+                        layer.append(layers.Dense(dense_layer_node, activation=dense_activation))
+                        layer.append(layers.Flatten())
+                        layer.append(layers.Dense(32, activation='linear'))
+
+                        model = keras.Sequential(layer)
+                        model.summary()
+
+
+                        # dense_layer_dict = {}
+                        # for i in range(dense_layer_num):
+                        #     if i == 0:
+                        #         dense_layer_dict[i]= layers.Dense(dense_layer_node, 
+                        #                                           activation=dense_activation)(
+                        #                                               inputs)
+                        #     else:
+                        #         dense_layer_dict[i] = layers.Dense(dense_layer_node, 
+                        #                                            activation=dense_activation)(
+                        #                                                dense_layer_dict[i-1])
+                        # outputs = layers.Dense(output_num, name="predictions")(dense_layer_dict[i])
+                        # model = keras.Model(inputs=inputs, outputs=outputs)
                         
                         optim_choice = st.radio("Choose optimizer",("SGD","Adam"))
                         # Instantiate an optimizer.
@@ -163,11 +187,14 @@ def app():
                         # Reshape train and test data.
                         # Prepare the training dataset.
                         batch_size = st.number_input("Enter batch size")
+                        batch_size = "32"
     
                         if batch_size:
                             batch_size = int(batch_size)
                             x_train = np.reshape(x_train, (-1, input_shape))
                             x_test = np.reshape(x_test, (-1, input_shape))
+                            # tf.reshape(x_train, (32, input_shape, 1))
+                            
                             train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
                             train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size)
                             
